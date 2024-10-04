@@ -1,136 +1,187 @@
+#include <EEPROM.h>
+#include <Wire.h>
 #include <FastLED.h>
 
-#define NUM_LEDS 13
-#define LED_DATA_PIN 2
-#define SPEAKER_PIN 12
-#define PLAYER1_BUTTON_PIN 4
-#define PLAYER2_BUTTON_PIN 5
-#define PLAYER1_LED_PIN 13
-#define PLAYER2_LED_PIN 14
-
-int tones[] = { 261, 277, 294, 311, 330, 349, 370, 392, 415, 440 };
-//            mid C  C#   D    D#   E    F    F#   G    G#   A
+#define PIN_SPEAKER 12
+#define LED_PIN     5
+#define NUM_LEDS    9
+#define INITIAL_BALL_SPEED 200
 
 CRGB leds[NUM_LEDS];
 
-int player1Button = 0;
-int player2Button = 0;
-
 enum gameStates {
-                  IDLE,
-                  PLAYING
-                };
+  IDLE,
+  KICK_0_1,
+  KICK_1_0
+};
 
+typedef struct { 
+  int pin;
+  byte ledSignal;
+} button;
+
+const button buttons[] {
+    {2, (byte)0b11111110}, //P1
+    {3, (byte)0b11111101}, //P2
+};
+
+byte buttonPressStates;
+byte buttonReadyStates;
 gameStates gameState;
-
+short ballPosition;
 unsigned long timer;
-//P1 -> P2 1 -> NUM_LEDS
-//P2 -> P1 NUM_LEDS -> 1 
-int currentLed = 0;
-//P1 -> P2 direction = 0
-//P2 -> P1 direction = 1
-int direction = 0;
-unsigned long speed = 5000;
+unsigned long lastTimeBallPosition;
+int ballSpeed;
 
-void setup() {
-  Serial.begin(9600);
-
-  gameState = IDLE;
-
-  pinMode(PLAYER1_BUTTON_PIN, INPUT);
-  pinMode(PLAYER2_BUTTON_PIN, INPUT);
-  pinMode(PLAYER1_LED_PIN, OUTPUT);
-  pinMode(PLAYER2_LED_PIN, OUTPUT);
-
-  noTone(SPEAKER_PIN);
-  FastLED.addLeds<WS2812B, LED_DATA_PIN, RGB>(leds, NUM_LEDS);
-
-  resetLed();
+bool isButtonPressed(byte button) {
+  return bitRead(buttonPressStates, button) == 1;
 }
 
-void resetLed() {
-  for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB(0, 0, 0);
+void stopButtonLeds() {
+  Wire.beginTransmission(0x20);
+  Wire.write((byte)0b11111111);
+  Wire.endTransmission();
+  noTone(PIN_SPEAKER);
+}
+
+void readButtons() {
+  for (int i = 0; i < sizeof(buttons)/sizeof(button); i++) {
+    if (digitalRead(buttons[i].pin)) {
+      if (bitRead(buttonReadyStates, i)) {
+        bitClear(buttonReadyStates, i);
+        buttonPressStates = bitSet(buttonPressStates, i);
+      } else {
+        buttonPressStates = bitClear(buttonPressStates, i);
+      }
+    } else {
+      bitSet(buttonReadyStates, i);
+      buttonPressStates = bitClear(buttonPressStates, i);
+    }
   }
-  
+}
+
+void buttonLedOn(int ledIndex){
+  button b = buttons[ledIndex];
+  Wire.beginTransmission(0x20);
+  Wire.write(b.ledSignal);
+  Wire.endTransmission();
+}
+
+void setup() {
+  Wire.begin();
+
+  Serial.begin(9600);
+
+  for(int i = 0; i < sizeof(buttons)/sizeof(button); ++i) {
+    pinMode(buttons[i].pin, INPUT);
+  }
+
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS); 
+
+  delay(100);
+
+  stopButtonLeds();
+
+  FastLED.clear(); 
+  FastLED.show();
+
+  ballSpeed = INITIAL_BALL_SPEED;
+
+  Serial.println("setup OK");
+}
+
+void player1Wins() {
+}
+
+void increaseBallSpeed(short position) {
+  int delta = position * 30;
+  ballSpeed = INITIAL_BALL_SPEED - delta;
 }
 
 void loop() {
-  FastLED.show();
-  
-  if (direction) {
-    delay(0);
-  }
-
-  player1Button = digitalRead(PLAYER1_BUTTON_PIN);
-  player2Button = digitalRead(PLAYER2_BUTTON_PIN);
-
-  if (player1Button == HIGH) {
-    Serial.println("P1 pressed");
-  }
-
-  if (player2Button == HIGH) {
-    Serial.println("P2 pressed");
-  }
+  readButtons();
+  timer = millis();
 
   switch (gameState) {
     case IDLE:
-      if (player1Button == HIGH || player2Button == HIGH) {
-        gameState = PLAYING;
-        currentLed = 1;
-        timer = millis();
-        if (player1Button == HIGH) {
-          Serial.println("CHANGE DIRECTION 0");
-          direction = 0;
+      if (isButtonPressed(0)) {
+        gameState = KICK_0_1;
+
+        buttonLedOn(0);
+        ballPosition = 0;
+        lastTimeBallPosition = timer;
+        tone(PIN_SPEAKER, 100, 100);
+
+        leds[0] = CRGB::Red;
+        FastLED.show();
+
+      } else if (isButtonPressed(1)) {
+        gameState = KICK_1_0;
+
+        buttonLedOn(1);
+        ballPosition = 0;
+        lastTimeBallPosition = timer;
+        tone(PIN_SPEAKER, 200, 100);
+
+        leds[NUM_LEDS - 1] = CRGB::Red;
+        FastLED.show();
+        
+      }
+    break;
+
+    case KICK_0_1:
+      if (timer - lastTimeBallPosition > ballSpeed) {
+        
+        ballPosition ++;
+        lastTimeBallPosition = timer;
+
+        if (ballPosition < NUM_LEDS) {
+          FastLED.clear(); 
+          leds[ballPosition] = CRGB::Red;
+          FastLED.show();
         } else {
-          Serial.println("CHANGE DIRECTION 1");
-          direction = 1;
-        }
-      }
-      
-      break;
-    case PLAYING:
-      long passed = millis() - timer;
-      if (passed >= speed) {
-        if (currentLed < NUM_LEDS) {
-          currentLed ++;
-          Serial.println(passed);
-        }
-        timer = millis();
-      }
-      if (direction == 0) {
-        for (int i = 0; i <= NUM_LEDS; i++) {
-          if (i < currentLed) {
-            leds[i] = CRGB(50, 0, 0);
-          } else {
-            leds[i] = CRGB(0, 0, 0);
-          }
-          //FastLED.show();
-        }
-      } else {
-        for (int i = 0; i <= NUM_LEDS; i++) {
-          if (i > NUM_LEDS - currentLed + 1) {
-            leds[i] = CRGB(50, 0, 0);
-          } else {
-            leds[i] = CRGB(0, 0, 0);
-          }
-          //FastLED.show();
+          FastLED.clear(); 
+          FastLED.show();
+          stopButtonLeds();
+          gameState = IDLE;
         }
       }
 
-      if (currentLed == NUM_LEDS) {
-        if (direction == 0) {
-          direction = 1;
-          Serial.println("P1 -> P2");
+      if (isButtonPressed(1)) { //opponent responds
+        if (ballPosition <= 4) { //too early. 0 wins
+          player1Wins();
         } else {
-          Serial.println("P2 -> P1");
-          direction = 0;
+          ballPosition = NUM_LEDS - ballPosition;
+          increaseBallSpeed(ballPosition);
+          gameState = KICK_1_0;
         }
-        currentLed = 1;
       }
-      //FastLED.show();
 
-      break;
+    break;
+
+    case KICK_1_0:
+      if (timer - lastTimeBallPosition > ballSpeed) {
+        
+        ballPosition ++;
+        lastTimeBallPosition = timer;
+
+        if (ballPosition < NUM_LEDS) {
+          FastLED.clear(); 
+          leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
+          FastLED.show();
+        } else {
+          FastLED.clear(); 
+          FastLED.show();
+          stopButtonLeds();
+          gameState = IDLE;
+        }
+      }
+
+    break;
+
+    default:
+    
+    break;
   }
-
+ 
 }
