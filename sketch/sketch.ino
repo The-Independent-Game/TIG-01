@@ -5,7 +5,7 @@
 #define PIN_SPEAKER 12
 #define LED_PIN     5
 #define NUM_LEDS    9
-#define INITIAL_BALL_SPEED 200
+#define INITIAL_BALL_SPEED 300
 
 CRGB leds[NUM_LEDS];
 
@@ -32,6 +32,8 @@ short ballPosition;
 unsigned long timer;
 unsigned long lastTimeBallPosition;
 int ballSpeed;
+byte animationButton;
+bool sound = false;
 
 bool isButtonPressed(byte button) {
   return bitRead(buttonPressStates, button) == 1;
@@ -90,12 +92,74 @@ void setup() {
   Serial.println("setup OK");
 }
 
-void player1Wins() {
+void rotateAnimation() {
+  int transTable[2] = {0,1};
+  if (++animationButton > 3) animationButton = 0;
+  buttonLedOn(transTable[animationButton]);
 }
 
-void increaseBallSpeed(short position) {
-  int delta = position * 30;
+void player1Wins() {
+  byte melody[] = { 250, 196, 196, 220, 196,0, 247, 250};
+
+  byte noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4 };
+
+  int noteDuration = 0;
+  int pauseBetweenNotes = 0;
+
+ for (byte thisNote = 0; thisNote < sizeof(melody)/sizeof(byte); thisNote++) {
+    noteDuration = 1000/noteDurations[thisNote];
+    if (sound) tone(PIN_SPEAKER, melody[thisNote],noteDuration);
+    if (melody[thisNote] > 0) {
+      rotateAnimation();
+    }
+    pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(PIN_SPEAKER);
+    if (melody[thisNote] > 0) {
+      stopButtonLeds();
+    }
+  }
+}
+
+void player0Wins() {
+  byte melody[] = { 250, 196, 196, 220, 196,0, 247, 250};
+
+  byte noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4 };
+
+  int noteDuration = 0;
+  int pauseBetweenNotes = 0;
+
+ for (byte thisNote = 0; thisNote < sizeof(melody)/sizeof(byte); thisNote++) {
+    noteDuration = 1000/noteDurations[thisNote];
+    if (sound) tone(PIN_SPEAKER, melody[thisNote],noteDuration);
+    if (melody[thisNote] > 0) {
+      rotateAnimation();
+    }
+    pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(PIN_SPEAKER);
+    if (melody[thisNote] > 0) {
+      stopButtonLeds();
+    }
+  }
+}
+
+void setBallSpeed(short position) {
+  int delta = position * ((INITIAL_BALL_SPEED - 100) / position);
   ballSpeed = INITIAL_BALL_SPEED - delta;
+}
+
+void endGame(bool zeroOrOne) {
+  FastLED.clear(); 
+  FastLED.show();
+  stopButtonLeds();
+  if (zeroOrOne)  {
+    player1Wins();
+  } else {
+    player0Wins();
+  }
+  ballSpeed = INITIAL_BALL_SPEED;
+  gameState = IDLE;
 }
 
 void loop() {
@@ -110,7 +174,7 @@ void loop() {
         buttonLedOn(0);
         ballPosition = 0;
         lastTimeBallPosition = timer;
-        tone(PIN_SPEAKER, 100, 100);
+        if (sound) tone(PIN_SPEAKER, 100, 100);
 
         leds[0] = CRGB::Red;
         FastLED.show();
@@ -121,7 +185,7 @@ void loop() {
         buttonLedOn(1);
         ballPosition = 0;
         lastTimeBallPosition = timer;
-        tone(PIN_SPEAKER, 200, 100);
+        if (sound) tone(PIN_SPEAKER, 200, 100);
 
         leds[NUM_LEDS - 1] = CRGB::Red;
         FastLED.show();
@@ -140,19 +204,16 @@ void loop() {
           leds[ballPosition] = CRGB::Red;
           FastLED.show();
         } else {
-          FastLED.clear(); 
-          FastLED.show();
-          stopButtonLeds();
-          gameState = IDLE;
+          endGame(true);
         }
       }
 
       if (isButtonPressed(1)) { //opponent responds
         if (ballPosition <= 4) { //too early. 0 wins
-          player1Wins();
+          endGame(false);
         } else {
           ballPosition = NUM_LEDS - ballPosition;
-          increaseBallSpeed(ballPosition);
+          setBallSpeed(ballPosition);
           gameState = KICK_1_0;
         }
       }
@@ -170,10 +231,17 @@ void loop() {
           leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
           FastLED.show();
         } else {
-          FastLED.clear(); 
-          FastLED.show();
-          stopButtonLeds();
-          gameState = IDLE;
+          endGame(false);
+        }
+      }
+
+      if (isButtonPressed(0)) { //opponent responds
+        if (ballPosition <= 4) { //too early. 1 wins
+          endGame(true);
+        } else {
+          ballPosition = NUM_LEDS - ballPosition;
+          setBallSpeed(ballPosition);
+          gameState = KICK_0_1;
         }
       }
 
