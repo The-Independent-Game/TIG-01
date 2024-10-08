@@ -1,6 +1,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <FastLED.h>
+#include "Notes.h"
 
 #define PIN_SPEAKER 12
 #define LED_PIN     5
@@ -99,49 +100,99 @@ void rotateAnimation() {
 }
 
 void player1Wins() {
-  byte melody[] = { 250, 196, 196, 220, 196,0, 247, 250};
+  int melody[] = {
+  // Asa branca - Luiz Gonzaga
+  // Score available at https://musescore.com/user/190926/scores/181370
 
-  byte noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4 };
+    NOTE_G4,8, NOTE_A4,8, NOTE_B4,4, NOTE_D5,4, NOTE_D5,4, NOTE_B4,4, 
+    NOTE_C5,4, NOTE_C5,2, NOTE_G4,8, NOTE_A4,8,
+    NOTE_B4,4, NOTE_D5,4, NOTE_D5,4, NOTE_C5,4
+  };
+    /*,
 
-  int noteDuration = 0;
-  int pauseBetweenNotes = 0;
+    NOTE_B4,2, REST,8, NOTE_G4,8, NOTE_G4,8, NOTE_A4,8,
+    NOTE_B4,4, NOTE_D5,4, REST,8, NOTE_D5,8, NOTE_C5,8, NOTE_B4,8,
+    NOTE_G4,4, NOTE_C5,4, REST,8, NOTE_C5,8, NOTE_B4,8, NOTE_A4,8,
 
- for (byte thisNote = 0; thisNote < sizeof(melody)/sizeof(byte); thisNote++) {
-    noteDuration = 1000/noteDurations[thisNote];
-    if (sound) tone(PIN_SPEAKER, melody[thisNote],noteDuration);
-    if (melody[thisNote] > 0) {
-      rotateAnimation();
+    NOTE_A4,4, NOTE_B4,4, REST,8, NOTE_B4,8, NOTE_A4,8, NOTE_G4,8,
+    NOTE_G4,2, REST,8, NOTE_G4,8, NOTE_G4,8, NOTE_A4,8,
+    NOTE_B4,4, NOTE_D5,4, REST,8, NOTE_D5,8, NOTE_C5,8, NOTE_B4,8,
+
+    NOTE_G4,4, NOTE_C5,4, REST,8, NOTE_C5,8, NOTE_B4,8, NOTE_A4,8,
+    NOTE_A4,4, NOTE_B4,4, REST,8, NOTE_B4,8, NOTE_A4,8, NOTE_G4,8,
+    NOTE_G4,4, NOTE_F5,8, NOTE_D5,8, NOTE_E5,8, NOTE_C5,8, NOTE_D5,8, NOTE_B4,8,
+
+    NOTE_C5,8, NOTE_A4,8, NOTE_B4,8, NOTE_G4,8, NOTE_A4,8, NOTE_G4,8, NOTE_E4,8, NOTE_G4,8,
+    NOTE_G4,4, NOTE_F5,8, NOTE_D5,8, NOTE_E5,8, NOTE_C5,8, NOTE_D5,8, NOTE_B4,8,
+    NOTE_C5,8, NOTE_A4,8, NOTE_B4,8, NOTE_G4,8, NOTE_A4,8, NOTE_G4,8, NOTE_E4,8, NOTE_G4,8,
+    NOTE_G4,-2, REST,4
+  
+  };
+  */
+  int notes = sizeof(melody) / sizeof(melody[0]) / 2;
+  playerWins(melody, notes);
+}
+
+void playerWins(int melody[], int notes) {
+  int tempo = 120;
+
+  int wholenote = (60000 * 4) / tempo;
+
+  int divider = 0, noteDuration = 0;
+
+  for (int thisNote = 0; thisNote < notes * 2; thisNote = thisNote + 2) {
+    rotateAnimation();
+
+    // calculates the duration of each note
+    divider = melody[thisNote + 1];
+    if (divider > 0) {
+      // regular note, just proceed
+      noteDuration = (wholenote) / divider;
+    } else if (divider < 0) {
+      // dotted notes are represented with negative durations!!
+      noteDuration = (wholenote) / abs(divider);
+      noteDuration *= 1.5; // increases the duration in half for dotted notes
     }
-    pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
+
+    // we only play the note for 90% of the duration, leaving 10% as a pause
+    tone(PIN_SPEAKER, melody[thisNote], noteDuration * 0.9);
+
+    // Wait for the specief duration before playing the next note.
+    delay(noteDuration);
+
+    // stop the waveform generation before the next note.
     noTone(PIN_SPEAKER);
-    if (melody[thisNote] > 0) {
-      stopButtonLeds();
-    }
   }
+
+  stopButtonLeds();
 }
 
 void player0Wins() {
-  byte melody[] = { 250, 196, 196, 220, 196,0, 247, 250};
+  int melody[] = {
 
-  byte noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4 };
+    // Baby Elephant Walk
+    // Score available at https://musescore.com/user/7965776/scores/1862611
 
-  int noteDuration = 0;
-  int pauseBetweenNotes = 0;
+    
+    NOTE_C4,-8, NOTE_E4,16, NOTE_G4,8, NOTE_C5,8, NOTE_E5,8, NOTE_D5,8, NOTE_C5,8, NOTE_A4,8,
+    NOTE_FS4,8, NOTE_G4,8, REST,4, REST,2,
+    NOTE_C4,-8, NOTE_E4,16, NOTE_G4,8, NOTE_C5,8, NOTE_E5,8, NOTE_D5,8, NOTE_C5,8, NOTE_A4,8,
+    NOTE_G4,-2, NOTE_A4,8, NOTE_DS4,1
+    }; /*,
+    
+    NOTE_A4,8,
+    NOTE_E4,8, NOTE_C4,8, REST,4, REST,2,
+    NOTE_C4,-8, NOTE_E4,16, NOTE_G4,8, NOTE_C5,8, NOTE_E5,8, NOTE_D5,8, NOTE_C5,8, NOTE_A4,8,
+    NOTE_FS4,8, NOTE_G4,8, REST,4, REST,4, REST,8, NOTE_G4,8,
+    NOTE_D5,4, NOTE_D5,4, NOTE_B4,8, NOTE_G4,8, REST,8, NOTE_G4,8,
+    
+    NOTE_C5,4, NOTE_C5,4, NOTE_AS4,16, NOTE_C5,16, NOTE_AS4,16, NOTE_G4,16, NOTE_F4,8, NOTE_DS4,8,
+    NOTE_FS4,4, NOTE_FS4,4, NOTE_F4,16, NOTE_G4,16, NOTE_F4,16, NOTE_DS4,16, NOTE_C4,8, NOTE_G4,8,
+    NOTE_AS4,8, NOTE_C5,8, REST,4, REST,2,
+  };*/
 
- for (byte thisNote = 0; thisNote < sizeof(melody)/sizeof(byte); thisNote++) {
-    noteDuration = 1000/noteDurations[thisNote];
-    if (sound) tone(PIN_SPEAKER, melody[thisNote],noteDuration);
-    if (melody[thisNote] > 0) {
-      rotateAnimation();
-    }
-    pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    noTone(PIN_SPEAKER);
-    if (melody[thisNote] > 0) {
-      stopButtonLeds();
-    }
-  }
+  int notes = sizeof(melody) / sizeof(melody[0]) / 2;
+  playerWins(melody, notes);
 }
 
 void setBallSpeed(short position) {
