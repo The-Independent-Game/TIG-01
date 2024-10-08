@@ -34,7 +34,7 @@ unsigned long timer;
 unsigned long lastTimeBallPosition;
 int ballSpeed;
 byte animationButton;
-bool sound = false;
+bool sound = true;
 
 bool isButtonPressed(byte button) {
   return bitRead(buttonPressStates, button) == 1;
@@ -155,7 +155,7 @@ void playerWins(int melody[], int notes) {
     }
 
     // we only play the note for 90% of the duration, leaving 10% as a pause
-    tone(PIN_SPEAKER, melody[thisNote], noteDuration * 0.9);
+    if (sound) tone(PIN_SPEAKER, melody[thisNote], noteDuration * 0.9);
 
     // Wait for the specief duration before playing the next note.
     delay(noteDuration);
