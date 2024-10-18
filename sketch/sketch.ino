@@ -232,6 +232,20 @@ bool areAllButtonPressed() {
   return count == sizeof(buttons)/sizeof(button);
 }
 
+void ballMoveOn(gameStates direction) {
+  ballPosition ++;
+  lastTimeBallPosition = timer;
+
+  if (ballPosition < NUM_LEDS) {
+    FastLED.clear();
+    if (direction == KICK_0_1) leds[ballPosition] = CRGB::Red;
+    if (direction == KICK_1_0) leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
+    FastLED.show();
+  } else {
+    endGame(true);
+  }
+}
+
 void loop() {
   readButtons();
   timer = millis();
@@ -292,17 +306,7 @@ void loop() {
 
       case KICK_0_1:
         if (timer - lastTimeBallPosition > ballSpeed) {
-          
-          ballPosition ++;
-          lastTimeBallPosition = timer;
-
-          if (ballPosition < NUM_LEDS) {
-            FastLED.clear(); 
-            leds[ballPosition] = CRGB::Red;
-            FastLED.show();
-          } else {
-            endGame(true);
-          }
+          ballMoveOn(KICK_0_1);
         }
 
         if (isButtonPressed(1)) { //opponent responds
@@ -319,17 +323,7 @@ void loop() {
 
       case KICK_1_0:
         if (timer - lastTimeBallPosition > ballSpeed) {
-          
-          ballPosition ++;
-          lastTimeBallPosition = timer;
-
-          if (ballPosition < NUM_LEDS) {
-            FastLED.clear(); 
-            leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
-            FastLED.show();
-          } else {
-            endGame(false);
-          }
+          ballMoveOn(KICK_1_0);
         }
 
         if (isButtonPressed(0)) { //opponent responds
