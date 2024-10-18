@@ -35,6 +35,7 @@ unsigned long animationTime;
 int ballSpeed;
 byte animationButton;
 bool sound = true;
+int midBallPosition;
 int tones[] = {261, 277, 294, 311, 330, 349, 370, 392, 415, 440};
 //            mid C  C#   D    D#   E    F    F#   G    G#   A
 
@@ -101,6 +102,8 @@ void setup() {
   stopBall();
 
   ballSpeed = INITIAL_BALL_SPEED;
+
+  midBallPosition = NUM_LEDS / 2;
 
   Serial.println("setup OK");
 }
@@ -233,16 +236,35 @@ bool areAllButtonPressed() {
 }
 
 void ballMoveOn(gameStates direction) {
-  ballPosition ++;
-  lastTimeBallPosition = timer;
+  if (timer - lastTimeBallPosition > ballSpeed) {
+    ballPosition ++;
+    lastTimeBallPosition = timer;
 
-  if (ballPosition < NUM_LEDS) {
-    FastLED.clear();
-    if (direction == KICK_0_1) leds[ballPosition] = CRGB::Red;
-    if (direction == KICK_1_0) leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
-    FastLED.show();
-  } else {
-    endGame(true);
+    if (ballPosition < NUM_LEDS) {
+      FastLED.clear();
+      if (direction == KICK_0_1) leds[ballPosition] = CRGB::Red;
+      if (direction == KICK_1_0) leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
+      FastLED.show();
+    } else {
+      endGame(true);
+    }
+  }
+}
+
+void opponentResponds(gameStates direction) {
+  byte checkButton;
+  if (direction == KICK_0_1) checkButton = 1;
+  if (direction == KICK_1_0) checkButton = 0;
+  
+  if (isButtonPressed(checkButton)) { //opponent responds
+    if (ballPosition <= midBallPosition) { //too early. other wins
+      endGame(false);
+    } else {
+      ballPosition = NUM_LEDS - ballPosition;
+      setBallSpeed(ballPosition);
+      if (direction == KICK_0_1) gameState = KICK_1_0;
+      if (direction == KICK_1_0) gameState = KICK_0_1;
+    }
   }
 }
 
@@ -305,41 +327,16 @@ void loop() {
       break;
 
       case KICK_0_1:
-        if (timer - lastTimeBallPosition > ballSpeed) {
-          ballMoveOn(KICK_0_1);
-        }
-
-        if (isButtonPressed(1)) { //opponent responds
-          if (ballPosition <= 4) { //too early. 0 wins
-            endGame(false);
-          } else {
-            ballPosition = NUM_LEDS - ballPosition;
-            setBallSpeed(ballPosition);
-            gameState = KICK_1_0;
-          }
-        }
-
+        ballMoveOn(KICK_0_1);
+        opponentResponds(KICK_0_1);
       break;
 
       case KICK_1_0:
-        if (timer - lastTimeBallPosition > ballSpeed) {
-          ballMoveOn(KICK_1_0);
-        }
-
-        if (isButtonPressed(0)) { //opponent responds
-          if (ballPosition <= 4) { //too early. 1 wins
-            endGame(true);
-          } else {
-            ballPosition = NUM_LEDS - ballPosition;
-            setBallSpeed(ballPosition);
-            gameState = KICK_0_1;
-          }
-        }
-
+        ballMoveOn(KICK_1_0);
+        opponentResponds(KICK_1_0);
       break;
 
       default:
-      
       break;
     }
   }
