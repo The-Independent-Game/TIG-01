@@ -78,6 +78,11 @@ void allOn() {
   Wire.endTransmission();
 }
 
+void stopBall() {
+  FastLED.clear(); 
+  FastLED.show();
+}
+
 void setup() {
   Wire.begin();
 
@@ -93,8 +98,7 @@ void setup() {
 
   stopButtonLeds();
 
-  FastLED.clear(); 
-  FastLED.show();
+  stopBall();
 
   ballSpeed = INITIAL_BALL_SPEED;
 
@@ -208,8 +212,7 @@ void setBallSpeed(short position) {
 }
 
 void endGame(bool zeroOrOne) {
-  FastLED.clear(); 
-  FastLED.show();
+  stopBall();
   stopButtonLeds();
   if (zeroOrOne)  {
     player1Wins();
@@ -220,106 +223,130 @@ void endGame(bool zeroOrOne) {
   gameState = IDLE;
 }
 
+bool areAllButtonPressed() {
+  int count = 0;
+  for (int i = 0; i < sizeof(buttons)/sizeof(button); i++) {
+    if (digitalRead(buttons[i].pin)) count ++;
+  }
+  if (count > 0) Serial.println(count);
+  return count == sizeof(buttons)/sizeof(button);
+}
+
 void loop() {
   readButtons();
   timer = millis();
 
-  switch (gameState) {
-    case IDLE:
-      if (random(0,400000) == 0) {
-        allOn();
-        if (sound) tone(PIN_SPEAKER, tones[random(0,sizeof(tones)/sizeof(int))]);
-        delay(500);
-        noTone(PIN_SPEAKER);
-        stopButtonLeds();
-      } else {  
-        if (timer - animationTime >= 500) {
-          rotateAnimation();
-          animationTime = millis();
+  if (areAllButtonPressed()) {
+    gameState = IDLE;
+    stopBall();
+    sound = !sound;
+    tone(PIN_SPEAKER, 400, 500);
+    allOn();
+    delay(1000);
+    stopButtonLeds();
+    delay(1000);
+    allOn();
+    delay(1000);
+    stopButtonLeds();
+    buttonPressStates = 0; //reset buttons
+    buttonReadyStates = 0;
+  } else {
+    switch (gameState) {
+      case IDLE:
+        if (random(0,400000) == 0) {
+          allOn();
+          if (sound) tone(PIN_SPEAKER, tones[random(0,sizeof(tones)/sizeof(int))]);
+          delay(500);
+          noTone(PIN_SPEAKER);
+          stopButtonLeds();
+        } else {  
+          if (timer - animationTime >= 500) {
+            rotateAnimation();
+            animationTime = millis();
+          }
         }
-      }
-      if (isButtonPressed(0)) {
-        gameState = KICK_0_1;
-
-        buttonLedOn(0);
-        ballPosition = 0;
-        lastTimeBallPosition = timer;
-        if (sound) tone(PIN_SPEAKER, 100, 100);
-
-        leds[0] = CRGB::Red;
-        FastLED.show();
-
-      } else if (isButtonPressed(1)) {
-        gameState = KICK_1_0;
-
-        buttonLedOn(1);
-        ballPosition = 0;
-        lastTimeBallPosition = timer;
-        if (sound) tone(PIN_SPEAKER, 200, 100);
-
-        leds[NUM_LEDS - 1] = CRGB::Red;
-        FastLED.show();
-        
-      }
-    break;
-
-    case KICK_0_1:
-      if (timer - lastTimeBallPosition > ballSpeed) {
-        
-        ballPosition ++;
-        lastTimeBallPosition = timer;
-
-        if (ballPosition < NUM_LEDS) {
-          FastLED.clear(); 
-          leds[ballPosition] = CRGB::Red;
-          FastLED.show();
-        } else {
-          endGame(true);
-        }
-      }
-
-      if (isButtonPressed(1)) { //opponent responds
-        if (ballPosition <= 4) { //too early. 0 wins
-          endGame(false);
-        } else {
-          ballPosition = NUM_LEDS - ballPosition;
-          setBallSpeed(ballPosition);
-          gameState = KICK_1_0;
-        }
-      }
-
-    break;
-
-    case KICK_1_0:
-      if (timer - lastTimeBallPosition > ballSpeed) {
-        
-        ballPosition ++;
-        lastTimeBallPosition = timer;
-
-        if (ballPosition < NUM_LEDS) {
-          FastLED.clear(); 
-          leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
-          FastLED.show();
-        } else {
-          endGame(false);
-        }
-      }
-
-      if (isButtonPressed(0)) { //opponent responds
-        if (ballPosition <= 4) { //too early. 1 wins
-          endGame(true);
-        } else {
-          ballPosition = NUM_LEDS - ballPosition;
-          setBallSpeed(ballPosition);
+        if (isButtonPressed(0)) {
           gameState = KICK_0_1;
+
+          buttonLedOn(0);
+          ballPosition = 0;
+          lastTimeBallPosition = timer;
+          if (sound) tone(PIN_SPEAKER, 100, 100);
+
+          leds[0] = CRGB::Red;
+          FastLED.show();
+
+        } else if (isButtonPressed(1)) {
+          gameState = KICK_1_0;
+
+          buttonLedOn(1);
+          ballPosition = 0;
+          lastTimeBallPosition = timer;
+          if (sound) tone(PIN_SPEAKER, 200, 100);
+
+          leds[NUM_LEDS - 1] = CRGB::Red;
+          FastLED.show();
+          
         }
-      }
+      break;
 
-    break;
+      case KICK_0_1:
+        if (timer - lastTimeBallPosition > ballSpeed) {
+          
+          ballPosition ++;
+          lastTimeBallPosition = timer;
 
-    default:
-    
-    break;
+          if (ballPosition < NUM_LEDS) {
+            FastLED.clear(); 
+            leds[ballPosition] = CRGB::Red;
+            FastLED.show();
+          } else {
+            endGame(true);
+          }
+        }
+
+        if (isButtonPressed(1)) { //opponent responds
+          if (ballPosition <= 4) { //too early. 0 wins
+            endGame(false);
+          } else {
+            ballPosition = NUM_LEDS - ballPosition;
+            setBallSpeed(ballPosition);
+            gameState = KICK_1_0;
+          }
+        }
+
+      break;
+
+      case KICK_1_0:
+        if (timer - lastTimeBallPosition > ballSpeed) {
+          
+          ballPosition ++;
+          lastTimeBallPosition = timer;
+
+          if (ballPosition < NUM_LEDS) {
+            FastLED.clear(); 
+            leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
+            FastLED.show();
+          } else {
+            endGame(false);
+          }
+        }
+
+        if (isButtonPressed(0)) { //opponent responds
+          if (ballPosition <= 4) { //too early. 1 wins
+            endGame(true);
+          } else {
+            ballPosition = NUM_LEDS - ballPosition;
+            setBallSpeed(ballPosition);
+            gameState = KICK_0_1;
+          }
+        }
+
+      break;
+
+      default:
+      
+      break;
+    }
   }
- 
 }
