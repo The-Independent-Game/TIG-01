@@ -5,7 +5,9 @@
 #define PIN_SPEAKER 12
 #define LED_PIN     5
 #define NUM_LEDS    9
-#define INITIAL_BALL_SPEED 300
+#define SLOW_BALL_DELAY 300
+#define FAST_BALL_SPEED 80
+
 
 CRGB leds[NUM_LEDS];
 
@@ -101,7 +103,7 @@ void setup() {
 
   stopBall();
 
-  ballSpeed = INITIAL_BALL_SPEED;
+  ballSpeed = SLOW_BALL_DELAY;
 
   midBallPosition = NUM_LEDS / 2;
 
@@ -209,11 +211,6 @@ void player0Wins() {
   playerWins(melody, notes);
 }
 
-void setBallSpeed(short position) {
-  int delta = position * ((INITIAL_BALL_SPEED - 100) / position);
-  ballSpeed = INITIAL_BALL_SPEED - delta;
-}
-
 void endGame(bool zeroOrOne) {
   stopBall();
   stopButtonLeds();
@@ -222,7 +219,7 @@ void endGame(bool zeroOrOne) {
   } else {
     player0Wins();
   }
-  ballSpeed = INITIAL_BALL_SPEED;
+  ballSpeed = SLOW_BALL_DELAY;
   gameState = IDLE;
 }
 
@@ -231,7 +228,6 @@ bool areAllButtonPressed() {
   for (int i = 0; i < sizeof(buttons)/sizeof(button); i++) {
     if (digitalRead(buttons[i].pin)) count ++;
   }
-  if (count > 0) Serial.println(count);
   return count == sizeof(buttons)/sizeof(button);
 }
 
@@ -242,12 +238,20 @@ void firstKick(gameStates direction) {
   if (direction == KICK_1_0) button = 1;
 
   buttonLedOn(button);
-  ballPosition = 0;
+  ballPosition = 0; //start
   lastTimeBallPosition = timer;
   if (sound) tone(PIN_SPEAKER, 100, 100);
 
-  leds[ballLedEncoding(ballPosition, direction)] = CRGB::Red;
+  setBallLedColor(ballPosition, direction);
   FastLED.show();
+}
+
+void setBallLedColor(int position, gameStates direction) {
+  if (position == midBallPosition) {
+    leds[ballLedEncoding(ballPosition, direction)] = CRGB::Green; 
+  } else {
+    leds[ballLedEncoding(ballPosition, direction)] = CRGB::Red;
+  }
 }
 
 int ballLedEncoding(int position, gameStates direction) {
@@ -262,7 +266,7 @@ void ballMoveOn(gameStates direction) {
 
     if (ballPosition < NUM_LEDS) {
       FastLED.clear();
-      leds[ballLedEncoding(ballPosition, direction)] = CRGB::Red;
+      setBallLedColor(ballPosition, direction);
       FastLED.show();
     } else {
       endGame(true);
@@ -276,11 +280,16 @@ void opponentResponds(gameStates direction) {
   if (direction == KICK_1_0) button = 0;
   
   if (isButtonPressed(button)) { //opponent responds
+    Serial.println("reponds!");
     if (ballPosition <= midBallPosition) { //too early. other wins
       endGame(false);
     } else {
-      ballPosition = NUM_LEDS - ballPosition;
-      setBallSpeed(ballPosition);
+      ballPosition = NUM_LEDS - ballPosition - 1;
+      Serial.println(ballPosition);
+
+      //change speed
+      ballSpeed = map(ballPosition, 0, midBallPosition -1,  FAST_BALL_SPEED, SLOW_BALL_DELAY); //FAST is a smaller number than SLOW ;)
+      
       if (direction == KICK_0_1) gameState = KICK_1_0;
       if (direction == KICK_1_0) gameState = KICK_0_1;
     }
