@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 #include <Wire.h>
 #include <FastLED.h>
 #include "Notes.h"
@@ -22,8 +21,8 @@ typedef struct {
 } button;
 
 const button buttons[] {
-    {2, (byte)0b11111110}, //P1
-    {3, (byte)0b11111101}, //P2
+    {2, (byte)0b11111110}, //P1 - Y
+    {3, (byte)0b11111101}  //P2 - G
 };
 
 byte buttonPressStates;
