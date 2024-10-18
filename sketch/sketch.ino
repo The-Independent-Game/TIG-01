@@ -235,6 +235,26 @@ bool areAllButtonPressed() {
   return count == sizeof(buttons)/sizeof(button);
 }
 
+void firstKick(gameStates direction) {
+  gameState = direction;
+  byte button;
+  if (direction == KICK_0_1) button = 0;
+  if (direction == KICK_1_0) button = 1;
+
+  buttonLedOn(button);
+  ballPosition = 0;
+  lastTimeBallPosition = timer;
+  if (sound) tone(PIN_SPEAKER, 100, 100);
+
+  leds[ballLedEncoding(ballPosition, direction)] = CRGB::Red;
+  FastLED.show();
+}
+
+int ballLedEncoding(int position, gameStates direction) {
+  if (direction == KICK_0_1) return position;
+  if (direction == KICK_1_0) return NUM_LEDS - 1 - position;
+}
+
 void ballMoveOn(gameStates direction) {
   if (timer - lastTimeBallPosition > ballSpeed) {
     ballPosition ++;
@@ -242,8 +262,7 @@ void ballMoveOn(gameStates direction) {
 
     if (ballPosition < NUM_LEDS) {
       FastLED.clear();
-      if (direction == KICK_0_1) leds[ballPosition] = CRGB::Red;
-      if (direction == KICK_1_0) leds[NUM_LEDS - 1 - ballPosition] = CRGB::Red;
+      leds[ballLedEncoding(ballPosition, direction)] = CRGB::Red;
       FastLED.show();
     } else {
       endGame(true);
@@ -252,11 +271,11 @@ void ballMoveOn(gameStates direction) {
 }
 
 void opponentResponds(gameStates direction) {
-  byte checkButton;
-  if (direction == KICK_0_1) checkButton = 1;
-  if (direction == KICK_1_0) checkButton = 0;
+  byte button;
+  if (direction == KICK_0_1) button = 1;
+  if (direction == KICK_1_0) button = 0;
   
-  if (isButtonPressed(checkButton)) { //opponent responds
+  if (isButtonPressed(button)) { //opponent responds
     if (ballPosition <= midBallPosition) { //too early. other wins
       endGame(false);
     } else {
@@ -302,27 +321,9 @@ void loop() {
           }
         }
         if (isButtonPressed(0)) {
-          gameState = KICK_0_1;
-
-          buttonLedOn(0);
-          ballPosition = 0;
-          lastTimeBallPosition = timer;
-          if (sound) tone(PIN_SPEAKER, 100, 100);
-
-          leds[0] = CRGB::Red;
-          FastLED.show();
-
+          firstKick(KICK_0_1);
         } else if (isButtonPressed(1)) {
-          gameState = KICK_1_0;
-
-          buttonLedOn(1);
-          ballPosition = 0;
-          lastTimeBallPosition = timer;
-          if (sound) tone(PIN_SPEAKER, 200, 100);
-
-          leds[NUM_LEDS - 1] = CRGB::Red;
-          FastLED.show();
-          
+          firstKick(KICK_1_0);
         }
       break;
 
