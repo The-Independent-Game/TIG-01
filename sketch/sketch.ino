@@ -31,9 +31,12 @@ gameStates gameState;
 short ballPosition;
 unsigned long timer;
 unsigned long lastTimeBallPosition;
+unsigned long animationTime;
 int ballSpeed;
 byte animationButton;
 bool sound = true;
+int tones[] = {261, 277, 294, 311, 330, 349, 370, 392, 415, 440};
+//            mid C  C#   D    D#   E    F    F#   G    G#   A
 
 bool isButtonPressed(byte button) {
   return bitRead(buttonPressStates, button) == 1;
@@ -69,6 +72,12 @@ void buttonLedOn(int ledIndex){
   Wire.endTransmission();
 }
 
+void allOn() {
+  Wire.beginTransmission(0x20);
+  Wire.write((byte)0b11111100);
+  Wire.endTransmission();
+}
+
 void setup() {
   Wire.begin();
 
@@ -93,9 +102,8 @@ void setup() {
 }
 
 void rotateAnimation() {
-  int transTable[2] = {0,1};
-  if (++animationButton > 3) animationButton = 0;
-  buttonLedOn(transTable[animationButton]);
+  if (++animationButton > 1) animationButton = 0;
+  buttonLedOn(animationButton);
 }
 
 void player1Wins() {
@@ -218,6 +226,18 @@ void loop() {
 
   switch (gameState) {
     case IDLE:
+      if (random(0,400000) == 0) {
+        allOn();
+        if (sound) tone(PIN_SPEAKER, tones[random(0,sizeof(tones)/sizeof(int))]);
+        delay(500);
+        noTone(PIN_SPEAKER);
+        stopButtonLeds();
+      } else {  
+        if (timer - animationTime >= 500) {
+          rotateAnimation();
+          animationTime = millis();
+        }
+      }
       if (isButtonPressed(0)) {
         gameState = KICK_0_1;
 
