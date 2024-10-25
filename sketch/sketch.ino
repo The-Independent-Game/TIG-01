@@ -7,6 +7,7 @@
 #define NUM_LEDS    9
 #define SLOW_BALL_DELAY 300
 #define FAST_BALL_SPEED 80
+#define MAX_LEVEL 12
 
 
 CRGB leds[NUM_LEDS];
@@ -40,6 +41,7 @@ bool sound = true;
 int midBallPosition;
 int tones[] = {261, 277, 294, 311, 330, 349, 370, 392, 415, 440};
 //            mid C  C#   D    D#   E    F    F#   G    G#   A
+int level;
 
 bool isButtonPressed(byte button) {
   return bitRead(buttonPressStates, button) == 1;
@@ -106,6 +108,8 @@ void setup() {
   ballSpeed = SLOW_BALL_DELAY;
 
   midBallPosition = NUM_LEDS / 2;
+
+  level = 0;
 
   Serial.println("setup OK");
 }
@@ -312,10 +316,17 @@ void opponentResponds(gameStates direction) {
     if (ballPosition <= midBallPosition) { //too early. other wins
       endGame(direction);
     } else {
+      level ++;
+      if (level > MAX_LEVEL) {
+        level = MAX_LEVEL;
+      }
+ 
       ballPosition = NUM_LEDS - ballPosition - 1;
       //change speed
       ballSpeed = map(ballPosition, 0, midBallPosition -1,  FAST_BALL_SPEED, SLOW_BALL_DELAY); //FAST is a smaller number than SLOW ;)
-      
+      int percLevel = 110 - map(level, 0, MAX_LEVEL, 0, 100);
+      ballSpeed = ballSpeed * percLevel / 100;
+
       if (direction == KICK_0_1) gameState = KICK_1_0;
       if (direction == KICK_1_0) gameState = KICK_0_1;
     }
