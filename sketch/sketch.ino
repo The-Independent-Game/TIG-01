@@ -221,23 +221,14 @@ void endGame(gameStates gs) {
   Serial.println("end");
   stopBall();
   stopButtonLeds();
-  if (gs == KICK_0_1)  {
-    buttonLedOn(0);
-    for (int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = CRGB::Yellow;
-    }
-    FastLED.show();
-    player0MusicWins();
-    stopBall();
-  } else if (gs == KICK_1_0) {
-    buttonLedOn(1);
-    for (int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = CRGB::Blue;
-    }
-    FastLED.show();
-    player1MusicWins();
-    stopBall();
+  gs == KICK_0_1 ? buttonLedOn(0) : buttonLedOn(1);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = gs == KICK_0_1 ? CRGB::Yellow : CRGB::Blue;
   }
+  FastLED.show();
+  gs == KICK_0_1 ? player0MusicWins() : player1MusicWins();
+  stopBall();
+  
   ballPosition = 0;
   ballSpeed = 300;
   gameState = IDLE;
