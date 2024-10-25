@@ -115,7 +115,7 @@ void rotateAnimation() {
   buttonLedOn(animationButton);
 }
 
-void player1Wins() {
+void player1MusicWins() {
   int melody[] = {
   // Asa branca - Luiz Gonzaga
   // Score available at https://musescore.com/user/190926/scores/181370
@@ -146,10 +146,10 @@ void player1Wins() {
   };
   */
   int notes = sizeof(melody) / sizeof(melody[0]) / 2;
-  playerWins(melody, notes);
+  playerMusicWins(melody, notes);
 }
 
-void playerWins(int melody[], int notes) {
+void playerMusicWins(int melody[], int notes) {
   int tempo = 120;
 
   int wholenote = (60000 * 4) / tempo;
@@ -183,7 +183,7 @@ void playerWins(int melody[], int notes) {
   stopButtonLeds();
 }
 
-void player0Wins() {
+void player0MusicWins() {
   int melody[] = {
 
     // Baby Elephant Walk
@@ -208,19 +208,33 @@ void player0Wins() {
   };*/
 
   int notes = sizeof(melody) / sizeof(melody[0]) / 2;
-  playerWins(melody, notes);
+  playerMusicWins(melody, notes);
 }
 
-void endGame(bool zeroOrOne) {
+void endGame(gameStates gs) {
+  Serial.println("end");
   stopBall();
   stopButtonLeds();
-  if (zeroOrOne)  {
-    player1Wins();
-  } else {
-    player0Wins();
+  if (gs == KICK_0_1)  {
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = CRGB::Yellow;
+    }
+    FastLED.show();
+    delay(2000);
+    stopBall();
+  } else if (gs == KICK_1_0) {
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = CRGB::Blue;
+    }
+    FastLED.show();
+    delay(2000);
+    stopBall();
   }
+  ballPosition = 0;
   ballSpeed = SLOW_BALL_DELAY;
   gameState = IDLE;
+  buttonPressStates = 0;
+  buttonReadyStates = 0;
 }
 
 bool areAllButtonPressed() {
@@ -269,7 +283,9 @@ void ballMoveOn(gameStates direction) {
       setBallLedColor(ballPosition, direction);
       FastLED.show();
     } else {
-      endGame(true);
+      Serial.print(ballPosition);
+      Serial.println(" ballposition");
+      endGame(direction);
     }
   }
 }
@@ -282,7 +298,8 @@ void opponentResponds(gameStates direction) {
   if (isButtonPressed(button)) { //opponent responds
     Serial.println("reponds!");
     if (ballPosition <= midBallPosition) { //too early. other wins
-      endGame(false);
+      Serial.println("end too early");
+      endGame(direction);
     } else {
       ballPosition = NUM_LEDS - ballPosition - 1;
       Serial.println(ballPosition);
@@ -303,7 +320,7 @@ void loop() {
   if (areAllButtonPressed()) {
     gameState = IDLE;
     stopBall();
-    sound = !sound;
+    //sound = !sound;
     tone(PIN_SPEAKER, 400, 500);
     allOn();
     delay(1000);
@@ -330,8 +347,10 @@ void loop() {
           }
         }
         if (isButtonPressed(0)) {
+          Serial.println("button 0");
           firstKick(KICK_0_1);
         } else if (isButtonPressed(1)) {
+          Serial.println("button 1");
           firstKick(KICK_1_0);
         }
       break;
