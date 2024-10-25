@@ -5,9 +5,11 @@
 #define PIN_SPEAKER 12
 #define LED_PIN     5
 #define NUM_LEDS    9
-#define SLOW_BALL_DELAY 300
-#define FAST_BALL_SPEED 80
-#define MAX_LEVEL 12
+
+#define MIN_DELAY_VEL 30
+#define MAX_DELAY_VEL 350
+
+#define MAX_LEVEL 20
 
 
 CRGB leds[NUM_LEDS];
@@ -105,7 +107,7 @@ void setup() {
 
   stopBall();
 
-  ballSpeed = SLOW_BALL_DELAY;
+  ballSpeed = MAX_DELAY_VEL;
 
   midBallPosition = NUM_LEDS / 2;
 
@@ -225,7 +227,7 @@ void endGame(gameStates gs) {
         leds[i] = CRGB::Yellow;
     }
     FastLED.show();
-    delay(2000);
+    player0MusicWins();
     stopBall();
   } else if (gs == KICK_1_0) {
     buttonLedOn(1);
@@ -233,14 +235,15 @@ void endGame(gameStates gs) {
         leds[i] = CRGB::Blue;
     }
     FastLED.show();
-    delay(2000);
+    player1MusicWins();
     stopBall();
   }
   ballPosition = 0;
-  ballSpeed = SLOW_BALL_DELAY;
+  ballSpeed = 300;
   gameState = IDLE;
   buttonPressStates = 0;
   buttonReadyStates = 0;
+  level = 1;
 }
 
 bool areAllButtonPressed() {
@@ -262,6 +265,8 @@ void firstKick(gameStates direction) {
   buttonLedOn(button);
   ballPosition = 0; //start
   lastTimeBallPosition = timer;
+
+  level = 1;
   
   setBallLedColor(ballPosition, direction);
   FastLED.show();
@@ -313,7 +318,7 @@ void opponentResponds(gameStates direction) {
   if (isButtonPressed(button)) { //opponent responds
     playerSound(direction);
     
-    if (ballPosition <= midBallPosition) { //too early. other wins
+    if (ballPosition <= midBallPosition) { //too early. other wins (4)
       endGame(direction);
     } else {
       level ++;
@@ -321,11 +326,19 @@ void opponentResponds(gameStates direction) {
         level = MAX_LEVEL;
       }
  
+      int vel = level + ballPosition * 2; //here ! before ballPosition normalization.
+      
       ballPosition = NUM_LEDS - ballPosition - 1;
       //change speed
-      ballSpeed = map(ballPosition, 0, midBallPosition -1,  FAST_BALL_SPEED, SLOW_BALL_DELAY); //FAST is a smaller number than SLOW ;)
-      int percLevel = 110 - map(level, 0, MAX_LEVEL, 0, 100);
-      ballSpeed = ballSpeed * percLevel / 100;
+      //int f = SLOW_BALL_DELAY - map(level, 0, MAX_LEVEL, 0, SLOW_BALL_DELAY);
+      
+      //ballSpeed = map(ballPosition, 0, midBallPosition -1,  FAST_BALL_SPEED, SLOW_BALL_DELAY); //FAST is a smaller number than SLOW ;)
+      //ballSpeed -= map(level, 0 , MAX_LEVEL, SLOW_BALL_DELAY, FAST_BALL_SPEED); 
+      
+      int min = 1 + (midBallPosition + 1) * 2;
+      int max = MAX_LEVEL + (NUM_LEDS - 1) * 2; 
+
+      ballSpeed = map(vel, min, max, MAX_DELAY_VEL, MIN_DELAY_VEL);
 
       if (direction == KICK_0_1) gameState = KICK_1_0;
       if (direction == KICK_1_0) gameState = KICK_0_1;
