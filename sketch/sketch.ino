@@ -216,6 +216,7 @@ void endGame(gameStates gs) {
   stopBall();
   stopButtonLeds();
   if (gs == KICK_0_1)  {
+    buttonLedOn(0);
     for (int i = 0; i < NUM_LEDS; i++) {
         leds[i] = CRGB::Yellow;
     }
@@ -223,6 +224,7 @@ void endGame(gameStates gs) {
     delay(2000);
     stopBall();
   } else if (gs == KICK_1_0) {
+    buttonLedOn(1);
     for (int i = 0; i < NUM_LEDS; i++) {
         leds[i] = CRGB::Blue;
     }
@@ -251,11 +253,12 @@ void firstKick(gameStates direction) {
   if (direction == KICK_0_1) button = 0;
   if (direction == KICK_1_0) button = 1;
 
+  playerSound(direction);
+
   buttonLedOn(button);
   ballPosition = 0; //start
   lastTimeBallPosition = timer;
-  if (sound) tone(PIN_SPEAKER, 100, 100);
-
+  
   setBallLedColor(ballPosition, direction);
   FastLED.show();
 }
@@ -283,9 +286,17 @@ void ballMoveOn(gameStates direction) {
       setBallLedColor(ballPosition, direction);
       FastLED.show();
     } else {
-      Serial.print(ballPosition);
-      Serial.println(" ballposition");
       endGame(direction);
+    }
+  }
+}
+
+void playerSound(gameStates direction) {
+  if (sound) {
+    if (direction == KICK_0_1) {
+      tone(PIN_SPEAKER, 400, 400);
+    } else {
+      tone(PIN_SPEAKER, 700, 400);
     }
   }
 }
@@ -296,14 +307,12 @@ void opponentResponds(gameStates direction) {
   if (direction == KICK_1_0) button = 0;
   
   if (isButtonPressed(button)) { //opponent responds
-    Serial.println("reponds!");
+    playerSound(direction);
+    
     if (ballPosition <= midBallPosition) { //too early. other wins
-      Serial.println("end too early");
       endGame(direction);
     } else {
       ballPosition = NUM_LEDS - ballPosition - 1;
-      Serial.println(ballPosition);
-
       //change speed
       ballSpeed = map(ballPosition, 0, midBallPosition -1,  FAST_BALL_SPEED, SLOW_BALL_DELAY); //FAST is a smaller number than SLOW ;)
       
@@ -317,10 +326,10 @@ void loop() {
   readButtons();
   timer = millis();
 
-  if (areAllButtonPressed()) {
+  if (areAllButtonPressed() && false) { //stop feature
     gameState = IDLE;
     stopBall();
-    //sound = !sound;
+    sound = !sound; 
     tone(PIN_SPEAKER, 400, 500);
     allOn();
     delay(1000);
@@ -347,10 +356,8 @@ void loop() {
           }
         }
         if (isButtonPressed(0)) {
-          Serial.println("button 0");
           firstKick(KICK_0_1);
         } else if (isButtonPressed(1)) {
-          Serial.println("button 1");
           firstKick(KICK_1_0);
         }
       break;
