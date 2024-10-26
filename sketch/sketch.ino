@@ -9,7 +9,7 @@
 #define MIN_DELAY_VEL 30
 #define MAX_DELAY_VEL 350
 
-#define MAX_LEVEL 30
+#define MAX_LEVEL 15
 
 
 CRGB leds[NUM_LEDS];
@@ -315,11 +315,9 @@ void opponentResponds(gameStates direction) {
       if (level > MAX_LEVEL) {
         level = MAX_LEVEL;
       }
-
-      int mul = 3;
-      int vel = level + ballPosition * mul; //here ! before ballPosition normalization
-      int min = 1 + (midBallPosition + 1) * mul;
-      int max = MAX_LEVEL + (NUM_LEDS - 1) * mul; 
+      int vel = ballPosition + level;
+      int min = midBallPosition + 1 + 1;
+      int max = NUM_LEDS - 1 + MAX_LEVEL;
 
       ballSpeed = map(vel, min, max, MAX_DELAY_VEL, MIN_DELAY_VEL);
 
