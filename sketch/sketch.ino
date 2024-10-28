@@ -5,9 +5,7 @@
 #define PIN_SPEAKER 12
 #define LED_PIN     5
 #define NUM_LEDS    9
-
-#define MIN_DELAY_VEL 30
-#define MAX_DELAY_VEL 350
+#define MAX_DELAY_VEL 300
 
 #define MAX_LEVEL 15
 
@@ -319,7 +317,8 @@ void opponentResponds(gameStates direction) {
       int min = midBallPosition + 1 + 1;
       int max = NUM_LEDS - 1 + MAX_LEVEL;
 
-      ballSpeed = map(vel, min, max, MAX_DELAY_VEL, MIN_DELAY_VEL);
+      ballSpeed = map(ballPosition, midBallPosition + 1, NUM_LEDS - 1, 300, 100);
+      ballSpeed -= map(level, 1, MAX_LEVEL, 0, 70);
 
       if (direction == KICK_0_1) gameState = KICK_1_0;
       if (direction == KICK_1_0) gameState = KICK_0_1;
