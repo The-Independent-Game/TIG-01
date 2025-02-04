@@ -260,6 +260,8 @@ void firstKick(gameStates direction) {
   
   setBallLedColor(ballPosition, direction);
   FastLED.show();
+
+  stopButtonLeds();
 }
 
 void setBallLedColor(int position, gameStates direction) {
