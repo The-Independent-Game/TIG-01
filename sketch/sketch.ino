@@ -5,9 +5,7 @@
 #define PIN_SPEAKER 12
 #define LED_PIN     5
 #define NUM_LEDS    9
-
-#define MIN_DELAY_VEL 30
-#define MAX_DELAY_VEL 350
+#define MAX_DELAY_VEL 300
 
 #define MAX_LEVEL 15
 
@@ -37,6 +35,7 @@ short ballPosition;
 unsigned long timer;
 unsigned long lastTimeBallPosition;
 unsigned long animationTime;
+unsigned long kickTime;
 int ballSpeed;
 byte animationButton;
 bool sound = true;
@@ -245,14 +244,19 @@ bool areAllButtonPressed() {
 }
 
 void firstKick(gameStates direction) {
+  //go to KICK_0_1 or KICK_1_0
   gameState = direction;
+
   byte button;
   if (direction == KICK_0_1) button = 0;
   if (direction == KICK_1_0) button = 1;
 
   playerSound(direction);
-
+  
+  
   buttonLedOn(button);
+  kickTime = timer;
+
   ballPosition = 0; //start
   lastTimeBallPosition = timer;
 
@@ -260,8 +264,6 @@ void firstKick(gameStates direction) {
   
   setBallLedColor(ballPosition, direction);
   FastLED.show();
-
-  stopButtonLeds();
 }
 
 void setBallLedColor(int position, gameStates direction) {
@@ -303,12 +305,19 @@ void playerSound(gameStates direction) {
 }
 
 void opponentResponds(gameStates direction) {
+  if (timer - kickTime > 200) {
+    stopButtonLeds();
+  }
+
   byte button;
   if (direction == KICK_0_1) button = 1;
   if (direction == KICK_1_0) button = 0;
   
   if (isButtonPressed(button)) { //opponent responds
     playerSound(direction);
+
+    buttonLedOn(button);
+    kickTime = timer;
     
     if (ballPosition <= midBallPosition) { //too early. other wins (4)
       endGame(direction);
@@ -321,7 +330,8 @@ void opponentResponds(gameStates direction) {
       int min = midBallPosition + 1 + 1;
       int max = NUM_LEDS - 1 + MAX_LEVEL;
 
-      ballSpeed = map(vel, min, max, MAX_DELAY_VEL, MIN_DELAY_VEL);
+      ballSpeed = map(ballPosition, midBallPosition + 1, NUM_LEDS - 1, 300, 100);
+      ballSpeed -= map(level, 1, MAX_LEVEL, 0, 70);
 
       if (direction == KICK_0_1) gameState = KICK_1_0;
       if (direction == KICK_1_0) gameState = KICK_0_1;
@@ -334,6 +344,7 @@ void opponentResponds(gameStates direction) {
 void loop() {
   readButtons();
   timer = millis();
+
 
   if (areAllButtonPressed() && false) { //stop feature
     gameState = IDLE;
