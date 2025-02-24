@@ -221,7 +221,7 @@ void endGame(gameStates gs) {
   stopButtonLeds();
   gs == KICK_0_1 ? buttonLedOn(0) : buttonLedOn(1);
   for (int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = gs == KICK_0_1 ? CRGB::Yellow : CRGB::Blue;
+    leds[i] = gs == KICK_1_0 ? CRGB::Yellow : CRGB::Blue;
   }
   FastLED.show();
   gs == KICK_0_1 ? player0MusicWins() : player1MusicWins();
